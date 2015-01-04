@@ -36,13 +36,17 @@ float tensao12va;
 float tensaoPOT;
 float tensaoPOTa;
 
-#define rele1pin 10
-#define rele2pin 11
-#define rele3pin 12
+//12 10 11
+#define rele1pin 11
+#define rele2pin 12
+#define rele3pin 10
 boolean rele1 = 0;
 boolean rele2 = 0;
 boolean rele3 = 0;
 int mudou = 1;
+
+unsigned long previousMillisDHT = 0; //TEMPO PARA O SENSOR DE TEMPERATURA
+const long intervalDHT = 5000;  
 
 void setup()
 {
@@ -91,56 +95,85 @@ void loop()
 
 void escreveDHT()
 {
-  DHT.read11(dht_dpin); //Lê as informações do sensor
-  int temp = DHT.temperature;  //converte float para int
-  int umid = DHT.humidity;  //converte float para int
-  if (umid != umida || temp != tempa)
-  {
-    //tft.fillRect(Xi, Yi, YF , XF, COR);
-    tft.fillRect(20, 200, 320, 30, BLACK);
+  unsigned long currentMillis = millis();
 
-    tft.setCursor(20,200);
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.print("TEMP");
-    tft.setTextSize(4);
-    if (temp <= 35)
+  if(currentMillis - previousMillisDHT >= intervalDHT) {
+    // save the last time you blinked the LED 
+    previousMillisDHT = currentMillis;   
+    DHT.read11(dht_dpin); //Lê as informações do sensor
+    int temp = DHT.temperature;  //converte float para int
+    int umid = DHT.humidity;  //converte float para int
+    if (umid != umida || temp != tempa)
     {
-      tft.setTextColor(GREEN);
-    }
-    if (temp > 35)
-    {
-      tft.setTextColor(RED);
-    }
-    tft.print(temp);
-    tft.print("C");
+      //tft.fillRect(Xi, Yi, YF , XF, COR);
+      tft.fillRect(20, 200, 320, 30, BLACK);
 
-    tft.print(" ");
+      tft.setCursor(20,200);
+      tft.setTextSize(2);
+      tft.setTextColor(WHITE);
+      tft.print("TEMP");
+      tft.setTextSize(4);
+      if (temp <= 35)
+      {
+        tft.setTextColor(GREEN);
+      }
+      if (temp > 35)
+      {
+        tft.setTextColor(RED);
+      }
+      tft.print(temp);
+      tft.print("C");
 
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.print("UMID");
-    tft.setTextSize(4);
-        if (umid <= 60)
-    {
-      tft.setTextColor(GREEN);
+      tft.print(" ");
+
+      tft.setTextSize(2);
+      tft.setTextColor(WHITE);
+      tft.print("UMID");
+      tft.setTextSize(4);
+      if (umid <= 60)
+      {
+        tft.setTextColor(GREEN);
+      }
+      if (umid > 60)
+      {
+        tft.setTextColor(RED);
+      }
+      tft.print(umid);
+      tft.print("%");
+      umida = umid;
+      tempa = temp; 
     }
-        if (umid > 60)
-    {
-      tft.setTextColor(RED);
-    }
-    tft.print(umid);
-    tft.print("%");
-    umida = umid;
-    tempa = temp; 
   }
 }
 void letensao()
 {
-  tensao5v = analogRead(A6) * (5.001 / 1023.0);
-  tensao12v = analogRead(A7) * (12.001 / 1023.0);
-  tensaoPOT = analogRead(A5) * (12.001 / 1023.0);
+  //  tensao5v = analogRead(A6) * (5.001 / 1023.0) ;
+  //  tensao12v = analogRead(A7) * (15.001 / 1023.0);
+  //  tensaoPOT = analogRead(A5) * (15.001 / 1023.0);
+
+  for (int i = 0; i < 5; i++)
+  {
+    tensaoPOT = tensaoPOT + analogRead(A5);
+    delay(1);
+  }
+  tensaoPOT = (tensaoPOT / 5) * (15.001/1023.0);  
+
+  for (int j = 0; j < 5; j++)
+  {
+    tensao12v = tensao12v + analogRead(A7);
+    delay(1);
+  }
+  tensao12v = (tensao12v / 5) * (15.001/1023.0);  
+
+  for (int k = 0; k < 5; k++)
+  {
+    tensao5v = tensao5v + analogRead(A6);
+    delay(1);
+  }
+  tensao5v = (tensao5v / 5) * (5.001/1023.0);  
+
 }
+
 void botao()
 {
   if (mudou == 1)
@@ -222,8 +255,7 @@ void letouch()
 }
 void escrevetensao5V()
 {
-
-  if (tensao5v != tensao5va)
+  if ((tensao5v - tensao5va) > 0.15  || (tensao5v - tensao5va) < -0.15 )
   {
     //tft.fillRect(Xi, Yi, YF , XF, COR);
     tft.fillRect(70, 10, 150,45, BLACK);
@@ -259,7 +291,7 @@ void escrevetensao5V()
 void escrevetensao12V()
 {
 
-  if (tensao12v != tensao12va)
+  if ((tensao12v - tensao12va) > 0.15  || (tensao12v - tensao12va) < -0.15 )
   {
     //tft.fillRect(Xi, Yi, YF , XF, COR);
     tft.fillRect(70, 70, 190,45, BLACK);
@@ -295,7 +327,8 @@ void escrevetensao12V()
 void escrevetensaoPOT()
 {
 
-  if (tensaoPOT != tensaoPOTa)
+  if (tensaoPOT != tensaoPOTa && ((tensaoPOT - tensaoPOTa) > 0.06  || (tensaoPOT - tensaoPOTa) < -0.06 ))
+    //  if (tensaoPOT != tensaoPOTa)
   {
     //tft.fillRect(Xi, Yi, YF , XF, COR);
     tft.fillRect(70, 130, 190,45, BLACK);
@@ -310,4 +343,7 @@ void escrevetensaoPOT()
     tensaoPOTa = tensaoPOT;
   }
 }
+
+
+
 
